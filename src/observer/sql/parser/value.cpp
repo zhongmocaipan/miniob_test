@@ -67,6 +67,7 @@ void Value::set_data(char *data, int length)
       LOG_WARN("unknown data type: %d", attr_type_);
     } break;
   }
+  return;
 }
 void Value::set_int(int val)
 {
