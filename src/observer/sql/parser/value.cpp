@@ -17,7 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include <sstream>
-
+#include <iomanip>
 const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans"};
 
 const char *attr_type_to_string(AttrType type)
@@ -45,6 +45,11 @@ Value::Value(bool val) { set_boolean(val); }
 
 Value::Value(const char *s, int len /*= 0*/) { set_string(s, len); }
 
+Value::Value(const char* date,int len,int flag){
+  int intDate=0;
+  strDate_to_intDate(date,intDate);
+  set_date(intDate);
+}
 void Value::set_data(char *data, int length)
 {
   switch (attr_type_) {
@@ -63,6 +68,10 @@ void Value::set_data(char *data, int length)
       num_value_.bool_value_ = *(int *)data != 0;
       length_                = length;
     } break;
+    case DATES: {
+      num_value_.date_value_=*(int *)data;
+      length_=length;
+    }break;
     default: {
       LOG_WARN("unknown data type: %d", attr_type_);
     } break;
@@ -99,6 +108,11 @@ void Value::set_string(const char *s, int len /*= 0*/)
   }
   length_ = str_value_.length();
 }
+void Value::set_date(int val){
+  attr_type_=DATES;
+  num_value_.date_value_=val;
+  length_=sizeof(val);
+}
 
 void Value::set_value(const Value &value)
 {
@@ -114,6 +128,9 @@ void Value::set_value(const Value &value)
     } break;
     case BOOLEANS: {
       set_boolean(value.get_boolean());
+    } break;
+    case DATES: {
+      set_date(value.get_date());
     } break;
     case UNDEFINED: {
       ASSERT(false, "got an invalid value type");
@@ -217,6 +234,19 @@ int Value::get_int() const
   }
   return 0;
 }
+int Value::get_date() const{
+  switch (attr_type_)
+  {
+    case DATES:{
+      return num_value_.int_value_;
+    }
+    default:{
+      LOG_WARN("unkonwn data type=%d",attr_type_);
+      return 0;
+    }
+  }
+  return 0;
+}
 
 float Value::get_float() const
 {
@@ -285,4 +315,30 @@ bool Value::get_boolean() const
     }
   }
   return false;
+}
+
+bool is_leap_year(int year){
+  return (year%4==0&&year%100!=0)||year%400==0;
+}
+void strDate_to_intDate(const char* strDate, int& intDate) {
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    int ret = sscanf(strDate, "%d-%d-%d", &year, &month, &day);
+    if (ret != 3) {
+        throw "Date illegal";
+    }
+    intDate = year * 10000 + month * 100 + day;
+}
+void intDate_to_strDate(const int intDate, std::string& strDate) {
+    int year = intDate / 10000;
+    int month = (intDate / 100) % 100;
+    int day = intDate % 100;
+
+    std::ostringstream oss;
+    oss << std::setfill('0') << std::setw(4) << year << '-';
+    oss << std::setfill('0') << std::setw(2) << month << '-';
+    oss << std::setfill('0') << std::setw(2) << day;
+
+    strDate = oss.str();
 }
